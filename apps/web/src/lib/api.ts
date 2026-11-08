@@ -7,8 +7,23 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   const response = await fetch(resource(`/api/v1${path}`), { ...options, headers: options.body instanceof FormData ? options.headers : { 'Content-Type': 'application/json', ...options.headers }, signal: AbortSignal.timeout(30000) });
   diagnostics.unshift({ method: options.method || 'GET', path, status: response.status, duration: Math.round(performance.now() - start) });
   diagnostics.splice(40);
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || `Request failed (${response.status}).`);
+  const body = await response.text();
+  let data: unknown;
+  if (body.trim()) {
+    try {
+      data = JSON.parse(body) as typeof data;
+    } catch {
+      if (!response.ok) throw new Error(`Request failed (${response.status}) for ${path}.`);
+      throw new Error(`The server returned an invalid JSON response for ${path} (HTTP ${response.status}).`);
+    }
+  }
+  if (!response.ok) {
+    const errorMessage = (data as { error?: { message?: string } } | undefined)?.error?.message;
+    throw new Error(errorMessage || `Request failed (${response.status}) for ${path}.`);
+  }
+  if (!body.trim() && response.status !== 204 && response.status !== 205) {
+    throw new Error(`The server returned an empty response for ${path} (HTTP ${response.status}).`);
+  }
   return data as T;
 }
 export interface Geometry { type: string; coordinates: number[][]; parts: number[][][] }
