@@ -18,6 +18,7 @@
   let busy = $state(false);
   let error = $state('');
   let notice = $state('');
+  let workflowAnnouncement = $state('');
   let instruction = $state('');
   let previewVersion = $state(0);
   let zoom = $state(1);
@@ -62,6 +63,7 @@
     } catch (e) { fail(e); }
   }
   function fail(e: unknown) { error = e instanceof Error ? e.message : 'An unexpected error occurred. Please try again.'; }
+  function announceWorkflowStep(step: string) { workflowAnnouncement = ''; window.setTimeout(() => workflowAnnouncement = `${step} complete.`, 50); }
   async function guard(action: () => Promise<void>) { error = ''; notice = ''; busy = true; try { await action(); } catch (e) { fail(e); } finally { busy = false; } }
   async function upload(file?: File) {
     if (!file) return;
@@ -70,7 +72,7 @@
       const data = new FormData(); data.append('file', file);
       project = await api<Project>('/projects', { method: 'POST', body: data });
       sessionStorage.setItem('project', project.id);
-      rep = null; job = null; messages = []; notice = 'Your map is ready to analyze.';
+      rep = null; job = null; messages = []; announceWorkflowStep('Step 1: Upload'); notice = 'Your map is ready to analyze.';
     });
   }
   async function refresh() {
@@ -99,6 +101,7 @@
       if (!project) return;
       project = await api<Project>(`/projects/${project.id}/configuration`, { method: 'PATCH', body: JSON.stringify(config) });
       await waitForJob(await api<Job>(`/projects/${project.id}/analyze`, { method: 'POST' }));
+      announceWorkflowStep('Step 2: Analyze');
     });
   }
   async function refine(text = instruction) {
@@ -108,6 +111,7 @@
       if (!project) return;
       await waitForJob(await api<Job>(`/projects/${project.id}/refine`, { method: 'POST', body: JSON.stringify({ instruction: text }) }));
       messages.push({ role: 'Assistant', text: job?.message || 'Changes applied.' });
+      announceWorkflowStep('Step 3: Refine');
     });
   }
   async function history(direction: string) { await guard(async () => { if (project) { await api(`/projects/${project.id}/history/${direction}`, { method: 'POST' }); await refresh(); } }); }
@@ -116,7 +120,7 @@
     await guard(async () => {
       if (!project) return;
       const result = await api<{ url: string }>(`/projects/${project.id}/exports/${format}`, { method: 'POST' });
-      const link = document.createElement('a'); link.href = resource(result.url); link.download = `accessible-map.${format}`; document.body.appendChild(link); link.click(); link.remove(); notice = `${format.toUpperCase()} export generated.`;
+      const link = document.createElement('a'); link.href = resource(result.url); link.download = `accessible-map.${format}`; document.body.appendChild(link); link.click(); link.remove(); notice = `${format.toUpperCase()} export generated.`; announceWorkflowStep('Step 4: Export');
     });
   }
   async function copyDiagnostics() { try { await navigator.clipboard.writeText(diagnosticsData); notice = 'Diagnostics copied.'; } catch { error = 'Clipboard unavailable. Select and copy the JSON below.'; } }
@@ -136,6 +140,7 @@
 <main id="main">
   <div class="intro"><h1>Transform your maps into tactile maps</h1></div>
   <nav class="workflow" aria-label="Progress tab">{#each ['Upload', 'Analyze', 'Refine', 'Export'] as step, index}<div class:active={rep ? index >= 2 : project ? index === 1 : index === 0}><span>{(project && index === 0) || (rep && index === 1) ? '✓' : String(index + 1).padStart(2, '0')}</span>{step}</div>{#if index < 3}<div class="step-line"></div>{/if}{/each}</nav>
+  <p class="sr-only" role="status" aria-live="polite" aria-atomic="true">{workflowAnnouncement}</p>
   <div class="notifications"><div role="alert">{#if error}<p class="error">{error}</p>{/if}</div><div role="status" aria-live="polite">{#if notice}<p class="notice">{notice}</p>{/if}</div></div>
   {#if !status.enabled}<p class="warning">Processing is paused. You can still preview and download existing results.</p>{/if}
   <div class="workspace">
@@ -153,7 +158,7 @@
           <fieldset disabled={busy}><legend>Output</legend><label>Production profile<select bind:value={config.output.profile}><option value="digital">Digital preview</option><option value="print">Printable document</option><option value="swell">Swell paper oriented</option></select></label><div class="field-pair"><label>Page width (mm)<input type="number" min="100" max="420" bind:value={config.output.page_width_mm}/></label><label>Page height (mm)<input type="number" min="100" max="420" bind:value={config.output.page_height_mm}/></label></div><div class="field-pair"><label>Line width (mm)<input type="number" min="0.3" max="5" step="0.1" bind:value={config.output.line_width}/></label><label>Label size<input type="number" min="8" max="40" bind:value={config.output.label_size}/></label></div><div class="field-pair"><label>Spacing target (mm)<input type="number" min="1" max="20" bind:value={config.output.minimum_spacing_mm}/></label><label>Symbol size<input type="number" min="2" max="20" bind:value={config.output.symbol_size}/></label></div><label>Region texture<select bind:value={config.output.texture}><option value="none">None</option><option value="dots">Dots</option><option value="diagonal">Diagonal lines</option></select></label><label class="check"><input type="checkbox" bind:checked={config.output.legend}/>Include legend</label><p class="small muted">High-contrast black-on-white output. Hardware profiles and braille translation are not available in this build.</p></fieldset>
         </section>
       {/if}
-      <section class="panel"><div class="section-heading"><h2>Step 2: Analyze and generate your map</h2></div><div class="engine-note"><Sparkles size={16}/><span>{status.ai_available ? 'OpenAI configured' : 'Local processing'}</span></div><p class="small muted">{status.ai_available && !['opencv', 'ocr'].includes(config.engine) ? 'Image sent to OpenAI for analysis.' : 'Image processed locally.'}</p><button class="primary wide" disabled={!project || busy || !status.enabled} onclick={analyze}>{busy ? 'Processing…' : rep ? 'Analyze again' : 'Analyze & generate'}<ArrowRight size={17}/></button>
+      <section class="panel"><div class="section-heading"><h2>Step 2: Analyze and generate your map</h2></div><div class="engine-note"><Sparkles size={16}/><span>{status.ai_available ? 'OpenAI configured' : 'Local processing'}</span></div><p class="small muted">{status.ai_available && !['opencv', 'ocr'].includes(config.engine) ? 'Image sent to OpenAI for analysis.' : 'Image processed locally.'}</p><button class="primary wide" aria-disabled={!project || busy || !status.enabled} aria-describedby="analyze-help" onclick={() => { if (project && !busy && status.enabled) void analyze(); }}>{busy ? 'Processing…' : rep ? 'Analyze again' : 'Analyze & generate'}<ArrowRight size={17}/></button><p id="analyze-help" class="small muted analyze-help" role="status" aria-live="polite">{!project ? 'Upload a map image to enable this button.' : !status.enabled ? 'Analysis is unavailable while processing is paused.' : busy ? 'Analysis is in progress.' : 'Your map is ready to analyze.'}</p>
         {#if busy && job}<div class="job-progress"><label for="job-progress">{job.stage}</label><progress id="job-progress" max="100" value={job.progress}></progress><span>{job.progress}%</span></div>{/if}
       </section>
     </aside>
