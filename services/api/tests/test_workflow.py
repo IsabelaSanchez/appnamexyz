@@ -167,3 +167,17 @@ def test_exported_labels_remain_visible_in_png_and_pdf():
         assert sum(pixel < 100 for pixel in label_region.tobytes()) > 300
     pdf = PdfReader(BytesIO(exporters["pdf"].render(rep)))
     assert "Readable Town" in pdf.pages[0].extract_text()
+
+
+def test_removing_a_named_feature_also_removes_its_duplicate_label():
+    from app.analyzers.engines import consolidate_labels
+    feature = Element(id="river", category="rivers", geometry=Geometry(type="polyline", coordinates=[[0.3, 0.1], [0.4, 0.7]]), label="Azure River", confidence=0.9, provenance="test")
+    duplicate = Element(id="river-label", category="labels", geometry=Geometry(type="point", coordinates=[[0.4, 0.4]]), label="Azure River", confidence=0.9, provenance="test")
+    independent = Element(id="note", category="labels", geometry=Geometry(type="point", coordinates=[[0.7, 0.4]]), label="North", confidence=0.9, provenance="test")
+    rep = Representation(project_id="test", source=Source(filename="map", width=600, height=400, mime_type="image/png"), elements=consolidate_labels([feature, duplicate, independent]))
+    assert [element.id for element in rep.elements] == ["river", "note"]
+    result = apply_plan(rep, deterministic_plan("Remove the rivers"))
+    from app.exporters.render import render_svg
+    svg = render_svg(result)
+    assert "Azure River" not in svg
+    assert "North" in svg

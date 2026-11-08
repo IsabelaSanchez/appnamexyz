@@ -99,8 +99,13 @@ class HybridEngine:
                 if distance < 0.025:
                     element.geometry = nearest.geometry
                     element.provenance = "openai+opencv"
-        existing = {e.label.casefold() for e in semantic.elements if e.label}
-        semantic.elements.extend([e for e in text.elements if e.label.casefold() not in existing][:max(0, 200 - len(semantic.elements))])
+        for element in semantic.elements:
+            if not element.label:
+                continue
+            label_key = normalize_label(element.label)
+            if any(normalize_label(candidate.label) in label_key and np.linalg.norm(np.array(candidate.geometry.coordinates[0]) - np.array(element.geometry.coordinates[0])) < 0.12 for candidate in text.elements if normalize_label(candidate.label)):
+                element.provenance += "+ocr"
+        semantic.warnings.append(f"OCR reviewed {len(text.elements)} text fragments. Unmatched fragments were not added automatically because they may be source legends or duplicate labels.")
         semantic.warnings.append("Hybrid geometry matching is approximate. Review feature alignment and OCR labels before production.")
         return semantic
 
@@ -108,10 +113,32 @@ class HybridEngine:
 engines: dict[str, RecognitionEngine] = {"opencv": OpenCVEngine(), "ocr": OCREngine(), "openai": OpenAIEngine(), "hybrid": HybridEngine()}
 
 
+def normalize_label(label: str) -> str:
+    return "".join(character for character in label.casefold() if character.isalnum())
+
+
+def consolidate_labels(elements: list[Element]) -> list[Element]:
+    feature_labels = {normalize_label(element.label) for element in elements if element.category != "labels" and element.label}
+    consolidated = []
+    label_positions: dict[str, list[list[float]]] = {}
+    for element in elements:
+        if element.category == "labels" and element.label:
+            key = normalize_label(element.label)
+            if key in feature_labels:
+                continue
+            point = element.geometry.coordinates[0]
+            if any(np.linalg.norm(np.array(point) - np.array(previous)) < 0.04 for previous in label_positions.get(key, [])):
+                continue
+            label_positions.setdefault(key, []).append(point)
+        consolidated.append(element)
+    return consolidated
+
+
 async def analyze(project_id: str, image: Image.Image, source: Source, config: ProjectConfig) -> Representation:
     selected = config.engine if config.engine != "auto" else ("hybrid" if settings.openai_api_key else "opencv")
     started = time.monotonic()
     result = await engines[selected].analyze(image, config)
+    result.elements = consolidate_labels(result.elements)
     seen = set()
     for element in result.elements:
         if element.id in seen:

@@ -43,7 +43,7 @@ def render_svg(rep: Representation) -> str:
         categories.add(element.category)
         points = [(offset_x + x * map_width, offset_y + y * map_height) for x, y in element.geometry.coordinates]
         stroke = output.line_width * 900 / width
-        dash = ' stroke-dasharray="10 7"' if element.category == "rivers" else ' stroke-dasharray="3 5"' if element.category == "roads" else ""
+        dash = f' stroke-dasharray="{stroke * 3} {stroke * 3}"' if element.category == "rivers" else f' stroke-dasharray="{stroke} {stroke * 3}"' if element.category == "roads" else ""
         texture = element.style.texture if element.style.texture != "none" else output.texture
         fill = f'url(#{texture})' if element.category == "regions" and texture != "none" else "none"
         parts.append(f'<g id="{escape(element.id, quote=True)}"><title>{escape(element.label or element.category)}: {escape(element.description)}</title>')
@@ -68,8 +68,17 @@ def render_svg(rep: Representation) -> str:
         parts.append(f'<text x="50" y="{y}" font-size="18" font-family="sans-serif" font-weight="bold">Legend</text>')
         for index, category in enumerate(sorted(categories)):
             x, yy = 50 + (index % 4) * 205, y + 30 + (index // 4) * 30
-            dash = ' stroke-dasharray="10 7"' if category == "rivers" else ' stroke-dasharray="3 5"' if category == "roads" else ""
-            parts.append(f'<path d="M{x} {yy - 5}h30" stroke="black" stroke-width="2"{dash}/><text x="{x + 40}" y="{yy}" font-size="14" font-family="sans-serif">{category.title()}</text>')
+            dash = ' stroke-dasharray="6 6"' if category == "rivers" else ' stroke-dasharray="2 6"' if category == "roads" else ""
+            if category in ("cities", "landmarks"):
+                parts.append(f'<circle cx="{x + 15}" cy="{yy - 5}" r="5" fill="white" stroke="black" stroke-width="2"/>')
+            elif category == "labels":
+                parts.append(f'<text x="{x}" y="{yy}" font-size="14" font-family="sans-serif">Aa</text>')
+            elif category == "regions":
+                fill = f"url(#{output.texture})" if output.texture != "none" else "white"
+                parts.append(f'<rect x="{x}" y="{yy - 17}" width="28" height="16" fill="{fill}" stroke="black" stroke-width="2"/>')
+            else:
+                parts.append(f'<path d="M{x} {yy - 5}h30" stroke="black" stroke-width="2" stroke-linecap="round"{dash}/>')
+            parts.append(f'<text x="{x + 40}" y="{yy}" font-size="14" font-family="sans-serif">{category.title()}</text>')
     parts.append('</svg>')
     return "".join(parts)
 
