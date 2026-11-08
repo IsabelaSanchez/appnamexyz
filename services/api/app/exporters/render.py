@@ -61,7 +61,7 @@ def render_svg(rep: Representation) -> str:
                 parts.append(f'<{tag} points="{coordinates}" fill="{fill}" stroke="black" stroke-width="{stroke}" stroke-linejoin="round" stroke-linecap="round"{dash}/>')
         if element.label:
             x, y = points[0]
-            parts.append(f'<text x="{min(x + 8, 760)}" y="{max(y - 8, 22)}" font-family="sans-serif" font-size="{output.label_size}" fill="black" stroke="white" stroke-width="3" paint-order="stroke">{escape(element.label)}</text>')
+            parts.append(f'<text x="{min(x + 8, 760)}" y="{max(y - 8, 22)}" font-family="sans-serif" font-size="{output.label_size}" fill="black">{escape(element.label)}</text>')
         parts.append('</g>')
     if output.legend:
         y = canvas_height - 100

@@ -155,3 +155,15 @@ def test_hybrid_reads_independent_images(client):
     assert result["processing_metadata"]["engine"] == "hybrid"
     assert result["elements"]
     assert any("OpenAI is not configured" in warning for warning in result["warnings"])
+
+
+def test_exported_labels_remain_visible_in_png_and_pdf():
+    from app.exporters.render import exporters
+    from app.schemas import OutputSettings
+    rep = Representation(project_id="label-test", source=Source(filename="labels.png", width=500, height=400, mime_type="image/png"), elements=[Element(id="label", category="labels", geometry=Geometry(type="point", coordinates=[[0.2, 0.25]]), label="Readable Town", confidence=1, provenance="test")], export_settings=OutputSettings(legend=False, label_size=22))
+    png = exporters["png"].render(rep)
+    with Image.open(BytesIO(png)).convert("L") as image:
+        label_region = image.crop((400, 345, 800, 455))
+        assert sum(pixel < 100 for pixel in label_region.tobytes()) > 300
+    pdf = PdfReader(BytesIO(exporters["pdf"].render(rep)))
+    assert "Readable Town" in pdf.pages[0].extract_text()
