@@ -1,0 +1,56 @@
+name: accessible-materials
+services:
+  frontend:
+    build: ../apps/web
+    image: accessible-materials-web:${RELEASE_TAG:-current}
+    restart: unless-stopped
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+    networks: [application]
+  backend:
+    build: ../services/api
+    image: accessible-materials-api:${RELEASE_TAG:-current}
+    restart: unless-stopped
+    env_file: ${APP_ENV_FILE:-../.env}
+    environment:
+      STORAGE_PATH: /data
+      RELEASE_TAG: ${RELEASE_TAG:-current}
+    volumes: ["runtime:/data"]
+    mem_limit: 1100m
+    cpus: 1.5
+    healthcheck:
+      test: ["CMD", ".venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    networks: [application]
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    environment:
+      APP_HOST: ${APP_HOST:?Set APP_HOST}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data", "caddy_config:/config"]
+    mem_limit: 160m
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [application]
+networks:
+  application:
+volumes:
+  runtime:
+  caddy_data:
+  caddy_config:
