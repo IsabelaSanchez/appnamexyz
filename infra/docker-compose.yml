@@ -35,7 +35,7 @@ services:
     environment:
       APP_HOST: ${APP_HOST:?Set APP_HOST}
     ports: ["80:80", "443:443", "443:443/udp"]
-    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data", "caddy_config:/config"]
+    volumes: ["${CADDY_CONFIG_DIR:-.}:/etc/caddy:ro", "caddy_data:/data", "caddy_config:/config"]
     mem_limit: 160m
     depends_on:
       frontend:
