@@ -1,4 +1,4 @@
 export interface Preferences { theme: string; highContrast: boolean; textSize: number; reducedMotion: boolean; developer: boolean; mode: string; engine: string; profile: string }
 export const defaults: Preferences = { theme: 'light', highContrast: false, textSize: 100, reducedMotion: false, developer: false, mode: 'easy', engine: 'auto', profile: 'digital' };
-export function loadPreferences(): Preferences { try { const saved = JSON.parse(localStorage.getItem('preferences') || '{}'); return { ...defaults, ...saved, theme: saved.theme === 'dark' ? 'dark' : 'light' }; } catch { return { ...defaults }; } }
+export function loadPreferences(): Preferences { try { const saved = JSON.parse(localStorage.getItem('preferences') || '{}'); const theme = ['light', 'dark', 'blue-text', 'blue-background'].includes(saved.theme) ? saved.theme : defaults.theme; return { ...defaults, ...saved, theme }; } catch { return { ...defaults }; } }
 export function savePreferences(value: Preferences): void { localStorage.setItem('preferences', JSON.stringify(value)); }
