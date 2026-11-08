@@ -1,0 +1,10 @@
+fastapi<1,>=0.115
+uvicorn<1,>=0.34
+python-multipart>=0.0.20
+pillow>=11
+opencv-python-headless>=4.11
+pytesseract>=0.3.13
+openai<3,>=2
+cairosvg>=2.7
+httpx>=0.28
+pydantic-settings>=2.8

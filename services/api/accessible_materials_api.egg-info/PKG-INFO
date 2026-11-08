@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: accessible-materials-api
+Version: 0.1.0
+Requires-Python: >=3.12
+Requires-Dist: fastapi<1,>=0.115
+Requires-Dist: uvicorn<1,>=0.34
+Requires-Dist: python-multipart>=0.0.20
+Requires-Dist: pillow>=11
+Requires-Dist: opencv-python-headless>=4.11
+Requires-Dist: pytesseract>=0.3.13
+Requires-Dist: openai<3,>=2
+Requires-Dist: cairosvg>=2.7
+Requires-Dist: httpx>=0.28
+Requires-Dist: pydantic-settings>=2.8
