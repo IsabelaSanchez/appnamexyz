@@ -14,7 +14,8 @@ def deterministic_plan(instruction: str) -> EditPlan | None:
             return None
     matches = {value for key, value in categories.items() if re.search(r"\b" + key + r"s?\b", text)}
     action = "hide" if re.match(r"^(remove|hide|exclude)\b", text) else "restore" if re.match(r"^(restore|show|include)\b", text) else None
-    if action and matches and len(text.split()) <= 7:
+    simple_command = re.fullmatch(r"(?:remove|hide|exclude|restore|show|include) (?:the )?(?:all )?(?:rivers?|roads?|borders?|regions?|city|cities|labels?|landmarks?|other)(?: (?:and |, )?(?:rivers?|roads?|borders?|regions?|cities|labels?|landmarks?|other))*", text)
+    if action and matches and simple_command:
         return EditPlan(message=f"{'Hidden' if action == 'hide' else 'Restored'} {', '.join(sorted(matches))}.", operations=[Operation(action=action, category=category) for category in sorted(matches)])
     if text in ("simplify the map", "simplify", "too much information"):
         return EditPlan(message="Simplified visible geometry and reduced low-priority detail.", operations=[Operation(action="simplify", value=0.008), Operation(action="density", text="low")])
