@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     public_url: str = ""
     allowed_origins: str = ""
     app_name: str = "appnamexyz"
-    app_tagline: str = "Make learning tangible."
-    app_description: str = "Turn educational maps into editable, accessible learning materials."
-    theme_color: str = "#16665b"
+    app_tagline: str = ""
+    app_description: str = "Map analysis, editing, and export."
+    theme_color: str = "#171717"
 
 
 settings = Settings()
