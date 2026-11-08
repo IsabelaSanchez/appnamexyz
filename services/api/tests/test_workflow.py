@@ -141,3 +141,17 @@ def test_mocked_openai_analysis_validates_representation(client, monkeypatch):
     wait(client, project["id"], job["id"])
     rep = client.get(f"/api/v1/projects/{project['id']}/representation").json()
     assert rep["elements"][0]["category"] == "rivers"
+
+
+def test_hybrid_reads_independent_images(client):
+    project = client.post("/api/v1/projects", files={"file": ("map.png", image_bytes(), "image/png")}).json()
+    config = project["config"]
+    config["engine"] = "hybrid"
+    client.patch(f"/api/v1/projects/{project['id']}/configuration", json=config)
+    for _ in range(3):
+        job = client.post(f"/api/v1/projects/{project['id']}/analyze").json()
+        wait(client, project["id"], job["id"])
+    result = client.get(f"/api/v1/projects/{project['id']}/representation").json()
+    assert result["processing_metadata"]["engine"] == "hybrid"
+    assert result["elements"]
+    assert any("OpenAI is not configured" in warning for warning in result["warnings"])

@@ -5,5 +5,5 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 EnvironmentFile=/opt/accessibility/config/application.env
-ExecStart=/usr/bin/python3 /opt/accessibility/current/infra/sync_deployment.py
+ExecStart=/usr/bin/python3 /opt/accessibility/config/sync_deployment.py
 TimeoutStartSec=1500

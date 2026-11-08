@@ -82,7 +82,8 @@ class OpenAIEngine:
 
 class HybridEngine:
     async def analyze(self, image: Image.Image, config: ProjectConfig) -> Interpretation:
-        geometry, text = await asyncio.gather(OpenCVEngine().analyze(image, config), OCREngine().analyze(image, config))
+        image.load()
+        geometry, text = await asyncio.gather(OpenCVEngine().analyze(image.copy(), config), OCREngine().analyze(image.copy(), config))
         if not settings.openai_api_key:
             return Interpretation(map_type=geometry.map_type, description=geometry.description + " " + text.description, elements=(geometry.elements + text.elements)[:300], warnings=geometry.warnings + text.warnings + ["OpenAI is not configured; hybrid combined computer vision and OCR only."])
         semantic = await OpenAIEngine().analyze(image, config)

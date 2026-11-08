@@ -13,6 +13,7 @@ previous="$(readlink -f /opt/accessibility/current || true)"
 "${compose[@]}" config --quiet
 "${compose[@]}" build
 if "${compose[@]}" up -d --wait --wait-timeout 180 && curl --fail --max-time 20 --retry 8 --retry-delay 5 "https://$APP_HOST/api/v1/health"; then
+    install -m 600 "$release_dir/infra/sync_deployment.py" /opt/accessibility/config/sync_deployment.py
     ln -sfn "$release_dir" /opt/accessibility/current
     printf '%s\n' "$RELEASE_TAG" > /opt/accessibility/config/current-release
 else
