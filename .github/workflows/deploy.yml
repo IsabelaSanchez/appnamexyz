@@ -54,3 +54,15 @@ jobs:
           done
           echo "EC2 did not deploy the expected revision within the verification window."
           exit 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+        working-directory: apps/web
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - name: Verify public browser workflow and accessibility
+        run: TEST_BASE_URL="$(cat ../../infra/public-url)" npm test
+        working-directory: apps/web
