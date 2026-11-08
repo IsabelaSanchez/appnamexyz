@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Dialog } from 'bits-ui';
-  import { ArrowRight, Upload, Settings, SlidersHorizontal, Sparkles, Download, Undo2, Redo2, ZoomIn, ZoomOut, Maximize, Check, Map, X, Send, Code, ArrowUpRight } from 'lucide-svelte';
+  import { ArrowRight, Upload, Settings, Eye, SlidersHorizontal, Sparkles, Download, Undo2, Redo2, ZoomIn, ZoomOut, Maximize, Check, Map, X, Send, Code, ArrowUpRight } from 'lucide-svelte';
   import { api, resource, diagnostics, type Branding, type Config, type Engine, type Job, type Project, type Representation, type Status } from '$lib/api';
   import { fallbackBranding } from '$lib/branding';
   import { defaults, loadPreferences, savePreferences } from '$lib/preferences';
@@ -41,8 +41,8 @@
 
   $effect(() => {
     if (typeof document !== 'undefined') {
-      const dark = preferences.theme === 'dark' || preferences.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      document.documentElement.dataset.theme = preferences.theme;
+      document.documentElement.dataset.contrast = preferences.highContrast ? 'high' : 'normal';
 
       document.documentElement.style.fontSize = `${preferences.textSize}%`;
       document.documentElement.dataset.motion = preferences.reducedMotion ? 'reduced' : 'normal';
@@ -126,12 +126,15 @@
 <a class="skip-link" href="#main">Skip to main content</a>
 <header class="topbar">
   <a href="/" class="brand" aria-label={`${brand.name} home`}><img src={brand.logo} alt="" width="36" height="36" /><span>{brand.name}</span></a>
-  <div class="header-actions"><button class="icon-button" onclick={() => settingsOpen = true} aria-label="Open application settings"><Settings size={20} /></button></div>
+  <div class="header-actions">
+    <details class="accessibility-panel"><summary class="accessibility-trigger"><Eye size={18}/><span>Accessibility</span></summary><div class="accessibility-popover"><h2>Accessibility</h2><label>Color theme<select bind:value={preferences.theme}><option value="light">Black Text, White Background</option><option value="dark">White Text, Black Background</option></select></label><label class="check"><input type="checkbox" bind:checked={preferences.highContrast}/>High contrast</label><label>Text size: {preferences.textSize}%<input type="range" min="100" max="150" step="10" bind:value={preferences.textSize}/></label><label class="check"><input type="checkbox" bind:checked={preferences.reducedMotion}/>Reduce motion</label></div></details>
+    <button class="settings-button" onclick={() => settingsOpen = true}><Settings size={19} /><span>Settings</span></button>
+  </div>
 </header>
 
 <main id="main">
   <div class="intro"><h1>Map conversion</h1></div>
-  <nav class="workflow" aria-label="Transformation progress">{#each ['Upload', 'Analyze', 'Refine', 'Export'] as step, index}<div class:active={rep ? index >= 2 : project ? index === 1 : index === 0}><span>{(project && index === 0) || (rep && index === 1) ? '✓' : String(index + 1).padStart(2, '0')}</span>{step}</div>{#if index < 3}<div class="step-line"></div>{/if}{/each}</nav>
+  <nav class="workflow" aria-label="Progress tab">{#each ['Upload', 'Analyze', 'Refine', 'Export'] as step, index}<div class:active={rep ? index >= 2 : project ? index === 1 : index === 0}><span>{(project && index === 0) || (rep && index === 1) ? '✓' : String(index + 1).padStart(2, '0')}</span>{step}</div>{#if index < 3}<div class="step-line"></div>{/if}{/each}</nav>
   <div class="notifications"><div role="alert">{#if error}<p class="error">{error}</p>{/if}</div><div role="status" aria-live="polite">{#if notice}<p class="notice">{notice}</p>{/if}</div></div>
   {#if !status.enabled}<p class="warning">Processing is paused. You can still preview and download existing results.</p>{/if}
   <div class="workspace">
@@ -176,4 +179,4 @@
   </div>
 </main>
 
-<Dialog.Root bind:open={settingsOpen}><Dialog.Portal><Dialog.Overlay class="dialog-overlay"/><Dialog.Content class="settings-dialog"><div class="dialog-heading"><Dialog.Title class="dialog-title">Application settings</Dialog.Title><Dialog.Close class="icon-button" aria-label="Close settings"><X size={21}/></Dialog.Close></div><Dialog.Description class="muted">Preferences are saved in this browser.</Dialog.Description><div class="settings-fields"><label>Theme<select bind:value={preferences.theme}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label><label>Text size: {preferences.textSize}%<input type="range" min="100" max="150" step="10" bind:value={preferences.textSize}/></label><label class="check"><input type="checkbox" bind:checked={preferences.reducedMotion}/>Reduce motion</label><label>Default mode<select bind:value={preferences.mode}><option value="easy">Easy Mode</option><option value="advanced">Advanced Mode</option></select></label><label>Default recognition engine<select bind:value={preferences.engine}>{#each engines as engine}<option value={engine.id} disabled={!engine.available}>{engine.name}</option>{/each}</select></label><label>Default output profile<select bind:value={preferences.profile}><option value="digital">Digital preview</option><option value="print">Printable document</option><option value="swell">Swell paper oriented</option></select></label><label class="check"><input type="checkbox" bind:checked={preferences.developer} onchange={() => { if (rep) void guard(refresh); }}/>Developer Mode</label><p class="small muted">Processing: {status.enabled ? 'enabled' : 'disabled'}. Sessions expire after {status.session_hours} hours.</p></div><Dialog.Close class="primary wide">Done</Dialog.Close></Dialog.Content></Dialog.Portal></Dialog.Root>
+<Dialog.Root bind:open={settingsOpen}><Dialog.Portal><Dialog.Overlay class="dialog-overlay"/><Dialog.Content class="settings-dialog"><div class="dialog-heading"><Dialog.Title class="dialog-title">Application settings</Dialog.Title><Dialog.Close class="icon-button" aria-label="Close settings"><X size={21}/></Dialog.Close></div><Dialog.Description class="muted">Preferences are saved in this browser.</Dialog.Description><div class="settings-fields"><label>Default mode<select bind:value={preferences.mode}><option value="easy">Easy Mode</option><option value="advanced">Advanced Mode</option></select></label><label>Default recognition engine<select bind:value={preferences.engine}>{#each engines as engine}<option value={engine.id} disabled={!engine.available}>{engine.name}</option>{/each}</select></label><label>Default output profile<select bind:value={preferences.profile}><option value="digital">Digital preview</option><option value="print">Printable document</option><option value="swell">Swell paper oriented</option></select></label><label class="check"><input type="checkbox" bind:checked={preferences.developer} onchange={() => { if (rep) void guard(refresh); }}/>Developer Mode</label><p class="small muted">Processing: {status.enabled ? 'enabled' : 'disabled'}. Sessions expire after {status.session_hours} hours.</p></div><Dialog.Close class="primary wide">Done</Dialog.Close></Dialog.Content></Dialog.Portal></Dialog.Root>
